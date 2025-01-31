@@ -1,5 +1,6 @@
 package net.azureaaron.hmapi;
 
+import net.azureaaron.hmapi.network.HypixelNetworkingImpl;
 import org.slf4j.Logger;
 
 import com.mojang.brigadier.Command;
@@ -43,6 +44,7 @@ public class HMApi implements ClientModInitializer {
 			HypixelPacketEvents.HELLO.register(HMApi::logPacket);
 			HypixelPacketEvents.LOCATION_UPDATE.register(HMApi::logPacket);
 		}
+		HypixelNetworkingImpl.bootstrap();
 	}
 
 	private static void registerCommands(CommandDispatcher<FabricClientCommandSource> dispatcher, CommandRegistryAccess registryAccess) {
