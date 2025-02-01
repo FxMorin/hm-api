@@ -1,10 +1,12 @@
 package net.azureaaron.hmapi.network;
 
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.event.Event;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.minecraft.network.RegistryByteBuf;
+import net.minecraft.network.codec.PacketCodec;
 import org.jetbrains.annotations.ApiStatus;
 
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -50,19 +52,23 @@ public class HypixelNetworkingImpl {
 	}
 
 	public static void bootstrap() {
-		Map<CustomPayload.Id<HypixelS2CPacket>, Event<HypixelPacketEvents. PacketCallback>> packets = Map.of(
-				PartyInfoS2CPacket.ID, HypixelPacketEvents.PARTY_INFO,
-				PlayerInfoS2CPacket.ID, HypixelPacketEvents.PLAYER_INFO,
-				HelloS2CPacket.ID, HypixelPacketEvents.HELLO,
-				LocationUpdateS2CPacket.ID, HypixelPacketEvents.LOCATION_UPDATE
-		);
-		for (var entry : packets.entrySet()) {
-			ClientPlayNetworking.registerGlobalReceiver(entry.getKey(), (payload, context) ->
-					context.client().execute(() ->
-							entry.getValue().invoker().onPacket(payload)));
-		}
+		registerPacket(HelloS2CPacket.ID, HypixelPacketEvents.HELLO, HelloS2CPacket.PACKET_CODEC);
+		registerPacket(PartyInfoS2CPacket.ID, HypixelPacketEvents.PARTY_INFO, PartyInfoS2CPacket.PACKET_CODEC);
+		registerPacket(PlayerInfoS2CPacket.ID, HypixelPacketEvents.PLAYER_INFO, PlayerInfoS2CPacket.PACKET_CODEC);
+		registerPacket(LocationUpdateS2CPacket.ID, HypixelPacketEvents.LOCATION_UPDATE, LocationUpdateS2CPacket.PACKET_CODEC);
 
 		// Send initial event registration
 		HypixelPacketEvents.HELLO.register(p -> sendEventRegistrations());
+	}
+
+	@SuppressWarnings("unchecked")
+    private static void registerPacket(
+			CustomPayload.Id<HypixelS2CPacket> id,
+			Event<HypixelPacketEvents.PacketCallback> event,
+			PacketCodec<RegistryByteBuf, ? extends HypixelS2CPacket> codec
+	) {
+		PayloadTypeRegistry.playS2C().register(id, (PacketCodec<RegistryByteBuf, HypixelS2CPacket>) codec);
+		ClientPlayNetworking.registerGlobalReceiver(id, (payload, context) ->
+				context.client().execute(() -> event.invoker().onPacket(payload)));
 	}
 }
